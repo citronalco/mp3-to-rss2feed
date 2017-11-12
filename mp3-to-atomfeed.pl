@@ -11,9 +11,9 @@ use XML::Writer;
 use utf8;
 use Unicode::String qw(utf8 latin1);
 
-if (@ARGV ne 3) {
+if (@ARGV lt 3 or @ARGV gt 4) {
     print "USAGE:\n";
-    print $0." <directory with MP3 files> <feed title> <url to directory with MP3 files>\n\n";
+    print $0." <directory with MP3 files> <feed title> <url to directory with MP3 files> [optional image url]\n\n";
     print "Example:\n";
     print $0.' /data/public/yoga-sessions-2017/ "My Yoga Podcast 2017" https://example.com/yoga-sessions-2017/'."\n";
     print 'This would create a file "/data/public/yoga-sessions-2017/podcast.xml", which should also be available via https://example.com/yoga-sessions-2017/podcast.xml to get things going.'."\n";
@@ -40,6 +40,13 @@ $xml->dataElement('pubDate'=>$NOW);
 $xml->dataElement('title'=>$FEEDTITLE);
 $xml->dataElement('description'=>$FEEDTITLE);
 $xml->dataElement('itunes:summary'=>$FEEDTITLE);
+
+# optional cover image
+if ($ARGV[3]) {
+    $xml->startTag('image');
+    $xml->dataElement('url'=>$ARGV[3]);
+    $xml->endTag('image');
+}
 
 my @files;
 foreach (File::Find::Rule->file()->name('*.mp3')->in($DIR)) {
