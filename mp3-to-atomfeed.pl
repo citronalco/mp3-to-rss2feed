@@ -13,10 +13,11 @@ use Unicode::String qw(utf8 latin1);
 
 if (@ARGV lt 3 or @ARGV gt 4) {
     print "USAGE:\n";
-    print $0." <directory with MP3 files> <feed title> <url to directory with MP3 files> [optional image url]\n\n";
+    print $0." <directory with MP3 files> <feed title> <URL to directory with MP3 files> [optional image url]\n\n";
     print "Example:\n";
-    print $0.' /data/public/yoga-sessions-2017/ "My Yoga Podcast 2017" https://example.com/yoga-sessions-2017/'."\n";
-    print 'This would create a file "/data/public/yoga-sessions-2017/podcast.xml", which should also be available via https://example.com/yoga-sessions-2017/podcast.xml to get things going.'."\n";
+    print $0.' /data/public/yoga-sessions-2017/ "My Yoga Podcast 2017" https://example.com/yoga-sessions-2017/'."\n\n";
+    print 'This creates the ATOM feed XML file "/data/public/yoga-sessions-2017/podcast.xml" which contains all mp3 files from the directory /data/public/yoga-sessions-2017 with their medadata.\n';
+    print 'If those mp3 files are also available via https://example.com/yoga-sessions-2017/ you can play them with your favourite podcast player using the created ATOM feed file.'."\n\n";
     exit;
 }
 
