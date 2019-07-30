@@ -4,7 +4,7 @@ Creates a RSS Atom feed for all MP3 files in a given directory, suitable for the
 
 
 ### Synopsis ###
-./mp3-to-atomfeed.pl <mp3 files directory> <feed title> <mp3 files url>
+```./mp3-to-atomfeed.pl <mp3 files directory> <feed title> <mp3 files url>```
 
 
 ### Example ###
