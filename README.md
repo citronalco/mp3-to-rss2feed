@@ -8,7 +8,7 @@ Creates a RSS Atom feed for all MP3 files in a given directory, suitable for the
 
 
 ### Example ###
-Your MP3 files are in directory "/data/mp3files/" and accessible via "https://www.example.net/public/podcast/".
+Your MP3 files are in directory "/data/mp3files/" and accessible via "https://www.example.net/podcast/".
 Now you want to have a nice Atom Feed for it to be able to subscribe and listen to them with your favourite podcast client.
 
 The following would create a valid RSS Atom feed with the title "My Podcast":
