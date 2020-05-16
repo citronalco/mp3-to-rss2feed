@@ -5,11 +5,13 @@ use warnings;
 use File::Find::Rule;
 use MP3::Info;
 use MP3::Tag;
-use URI::file;
+use URI::Escape;
 use POSIX;
 use XML::Writer;
 use utf8;
 use Unicode::String qw(utf8 latin1);
+use Digest::MD5;
+use File::Basename;
 
 if (@ARGV lt 3 or @ARGV gt 4) {
     print "USAGE:\n";
@@ -56,7 +58,8 @@ foreach (File::Find::Rule->file()->name('*.mp3')->in($DIR)) {
     $fileinfo{'mtime'}=(stat($fileinfo{'name'}))[10] or die($!);
     $fileinfo{'mdatetime'}=POSIX::strftime("%a, %d %b %Y %T %z",localtime((stat($fileinfo{'name'}))[10]));
     $fileinfo{'size'}=(stat($fileinfo{'name'}))[7] or die($!);
-    $fileinfo{'url'}=$URLBASE."/".URI::file->new(File::Spec->abs2rel($fileinfo{'name'},$DIR));
+    $fileinfo{'url'}=$URLBASE."/".uri_escape(File::Spec->abs2rel($fileinfo{'name'},$DIR));
+    $fileinfo{'guid'}=Digest::MD5::md5_hex(basename($fileinfo{'name'}));
     my $mp3=MP3::Tag->new($fileinfo{'name'}) or die($!);
     $mp3->get_tags;
     $fileinfo{'desc'}=latin1($mp3->comment())->utf8;
@@ -72,7 +75,7 @@ foreach my $file (reverse(sort { $a->{'mtime'} cmp $b->{'mtime'} } @files )) {
     $xml->dataElement('description'=>$file->{'desc'});
     $xml->dataElement('itunes:summary'=>$file->{'desc'});
     $xml->emptyTag('enclosure','url'=>$file->{'url'}, 'type'=>'audio/mpeg', 'length'=>$file->{'size'});
-    $xml->dataElement('guid'=>$file->{'url'});
+    $xml->dataElement('guid'=>$file->{'guid'});
     $xml->dataElement('pubDate'=>$file->{'mdatetime'});
     $xml->dataElement('itunes:duration'=>$file->{'itunes-duration'});
     $xml->endTag('item');
