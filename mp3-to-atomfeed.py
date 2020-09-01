@@ -7,7 +7,7 @@
 # - ID3-Chapters
 
 import sys
-from os import stat, listdir
+from os import stat, listdir, path
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, ElementTree
 import time
 from datetime import datetime, timezone
@@ -66,12 +66,15 @@ for filename in listdir(DIR):
     if not filename.lower().endswith(".mp3"):
         continue
 
+    filepath = path.join(DIR,filename)
     fileinfo = {}
 
+    print("FILEPATH "+filepath)
+
     fileinfo['name']=filename
-    fileinfo['mtime']=datetime.fromtimestamp(stat(filename).st_mtime)
-    fileinfo['mdatetime']=datetime.fromtimestamp(stat(filename).st_mtime,timezone.utc).strftime("%a, %d %b %Y %T %z")
-    fileinfo['size']=stat(filename).st_size
+    fileinfo['mtime']=datetime.fromtimestamp(stat(filepath).st_mtime)
+    fileinfo['mdatetime']=datetime.fromtimestamp(stat(filepath).st_mtime,timezone.utc).strftime("%a, %d %b %Y %T %z")
+    fileinfo['size']=stat(filepath).st_size
     fileinfo['url']=URLBASE+"/"+urllib.parse.quote(filename)
     fileinfo['guid']=md5(filename.encode()).hexdigest()
 
@@ -88,18 +91,33 @@ for filename in listdir(DIR):
         'TIME': None, 'TLEN': None 
     }
 
+
+    # FIXME
+    print(id3['COMM::XXX'])
+    sys.exit(0)
+
+
     for t in tags:
         if t in id3.keys():
            tags[t] = id3[t].text[0]
+#           tags[t] = id3[t][0]
 
+
+    print(tags)
+    sys.exit(0)
 
     fileinfo['desc']=tags['COMM']
     fileinfo['title']=tags['TIT2']
     fileinfo['duration']=tags['TLEN']
-    fileinfo['itunes-duration']=time.strftime("%H:%M:%S",time.gmtime(int(tag['TLEN']/1000)))
+#    fileinfo['itunes-duration']=time.strftime("%H:%M:%S",time.gmtime(int(tags['TLEN']/1000)))
 
     mediafiles.append(fileinfo)
 
+    print(fileinfo)
+    sys.exit(0)
+
+print(mediafiles)
+sys.exit(0)
 
 for mediafile in sorted(mediafiles, key=lambda x: x['mtime'], reverse=True):
     item = SubElement(channel, "item")
@@ -107,13 +125,13 @@ for mediafile in sorted(mediafiles, key=lambda x: x['mtime'], reverse=True):
     item.append(Element('description', text=mediafile['desc']))
     item.append(Element('itunes:summary', text=mediafile['desc']))
     item.append(Element('enclosure', attrib={
-        'url': mediainfo['url'],
+        'url': mediafile['url'],
         'type': "audio/mpeg",
-        'length': mediainfo['size']
+        'length': mediafile['size']
     }))
-    item.append(Element('guid', text=mediainfo['guid']))
-    item.append(Element('pubDate', text=mediainfo['mdatetime']))
-    item.append(Element('itunes:duration', text=mediainfo['itunes-duration']))
+    item.append(Element('guid', text=mediafile['guid']))
+    item.append(Element('pubDate', text=mediafile['mdatetime']))
+#    item.append(Element('itunes:duration', text=mediainfo['itunes-duration']))
 
 print(tostring(root, encoding='utf8', method='xml').decode())
 #ElementTree(root).write("test.xml",encoding="utf-8", xml_declaration=True)
