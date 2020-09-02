@@ -3,9 +3,11 @@
 # Todo:
 # - testen (fm4 + zündfunk)
 # - Mehr id3-Tags verwenden
-# - ID3-Chapters
+# - ID3-Chapters zu Description hinzufügen
 # - validieren (https://castfeedvalidator.com/?url=https://www.geierb.de/test/test.xml)
 # - doku: https://help.apple.com/itc/podcasts_connect/#/itcb54353390
+# - http://gitlab.jamesgallagher.ie/python/rss-feeds-for-rpi-tvh-audio-content/blob/master/generateRSSFeed.py
+# - https://www.stuffaboutcode.com/2012/09/python-create-rss-podcast-of-mp3-files.html
 
 import sys
 from os import stat, listdir, path
@@ -14,8 +16,9 @@ import time
 from datetime import datetime, timezone
 import urllib.parse
 from hashlib import md5
-from mutagen.id3 import ID3,ID3NoHeaderError,TRSN,TPE1,TALB,TRCK,TIT2,COMM,TYER,TDAT,TIME,TLEN,TDRL,CTOC,CHAP,CTOCFlags
 import mutagen
+from mutagen.id3 import ID3,ID3NoHeaderError,TPE1,TALB,TRCK,TIT2,COMM,TYER,TDAT,TIME,TDRC,TDRL,TLEN,TDRL,CTOC,CHAP,CTOCFlags
+import re
 
 if len(sys.argv) < 4 or len(sys.argv) > 5:
     print("Usage:", file=sys.stderr)
@@ -31,12 +34,87 @@ DIR = sys.argv[1]
 FEEDTITLE = sys.argv[2]
 URLBASE = sys.argv[3]
 try:
-    IMAGE=sys.argv[4]
+    IMAGE = sys.argv[4]
 except:
-    IMAGE=None
+    IMAGE = None
 
 LINK = URLBASE+"/podcast.xml";
-NOW=datetime.now(timezone.utc).strftime("%a, %d %b %Y %T %z")
+NOW = datetime.now(timezone.utc).strftime("%a, %d %b %Y %T %z")
+
+mediafiles = []
+for filename in listdir(DIR):
+    if not filename.lower().endswith(".mp3"):
+        continue
+
+    filepath = path.join(DIR,filename)
+    fileinfo = {}
+
+    fileinfo['name'] = filename
+    fileinfo['pubdate'] = datetime.fromtimestamp(stat(filepath).st_mtime,timezone.utc)
+    fileinfo['size'] = stat(filepath).st_size
+    fileinfo['url'] = URLBASE+"/"+urllib.parse.quote(filename)
+    fileinfo['guid'] = md5(filename.encode()).hexdigest()
+    fileinfo['duration'] = mutagen.File(filepath).info.length	# duration in seconds
+    fileinfo['chapters'] = []
+
+    # Read ID3 tags
+    try:
+        id3 = ID3(filepath)
+    except ID3NoHeaderError:
+        print("ERROR: %s has no ID3 tag, skipping" % filename, file=sys.stderr)
+        continue
+
+    tags = {
+        'TPE1': None, 'TALB': None, 'TRCK': None,
+        'TIT2': None, 'COMM': None,
+        'TYER': None, 'TDAT': None, 'TIME': None, 
+        'TDRC': None, 'TDRL': None, 'TDOR': None,
+        'TLEN': None,
+    }
+
+    for t in tags:
+       try:
+           tags[t] = id3.getall(t)[0].text[0]
+       except:
+           tags[t] = None
+
+    # map ID3 tags to feed items
+    fileinfo['desc'] = tags['COMM']
+    fileinfo['title'] = tags['TIT2']
+
+    # handling for TLEN
+    if tags['TLEN']:
+        fileinfo['duration'] = round(int(tags['TLEN'])/1000)
+
+    # handling for Chapter tag
+    for cFrame in id3.getall('CHAP'):
+        chapter = {}
+        chapter['title'] = cFrame.sub_frames.getall('TIT2')[0].text[0] or cFrame.element_id
+        chapter['start'] = round(int(int(cFrame.start_time)/1000))	# start time in seconds
+        fileinfo['chapters'].append(chapter)
+
+    # handling for publishing date (ID3v2.3: TYER,TDAT,TIME ID3v2.4: TRDC/TDRL)
+    dt = datetime.fromtimestamp(0)
+    if tags['TYER']:
+        dt = dt.replace(year=tags['TYER'])
+    if tags['TDAT']:
+        dt = dt.replace(day=tags['TDAT'][0:2],month=tags['TDAT'][2:4])
+    if tags['TIME']:
+        d = dt.replace(hour=tags['TIME'][0:2],minute=tags['TIME'][2:4])
+
+    for x in 'TDRC','TDRL','TDOR':
+        try:
+            if tags[x]:
+                dt=dt.replace(year=tags[x].year, month=tags[x].month, day=tags[x].day, hour=tags[x].hour, minute=tags[x].minute, second=tags[x].second)
+                break;
+        except:
+            continue
+
+    if dt != datetime.fromtimestamp(0):
+        fileinfo['pubdate'] = dt
+
+
+    mediafiles.append(fileinfo)
 
 
 root = Element('rss', attrib={
@@ -54,86 +132,36 @@ SubElement(channel,'atom:link', attrib={
     'rel': 'self',
     'type': 'application/rss+xml'
 })
-SubElement(channel,"language").text="de"
+SubElement(channel,"language").text = "de"
+SubElement(channel,'pubDate').text = NOW
+SubElement(channel,'title').text = FEEDTITLE
+SubElement(channel,'description').text = FEEDTITLE
+SubElement(channel,'itunes:summary').text = FEEDTITLE
+SubElement(channel,'itunes:category', attrib={'text':'Music'})
+SubElement(channel,'itunes:explicit').text = 'no'
 
-#channel.append(Element('language','de'))
-SubElement(channel,'pubDate').text=NOW
-SubElement(channel,'title').text=FEEDTITLE
-SubElement(channel,'description').text=FEEDTITLE
-SubElement(channel,'itunes:summary').text=FEEDTITLE
 if IMAGE is not None:
-    image = SubElement(channel,"image")
+    image = SubElement(channel, "image")
     image.append(Element('url', text=IMAGE))
 
-
-
-mediafiles = []
-for filename in listdir(DIR):
-    if not filename.lower().endswith(".mp3"):
-        continue
-
-    filepath = path.join(DIR,filename)
-    fileinfo = {}
-
-    print("FILEPATH "+filepath)
-
-    fileinfo['name']=filename
-    fileinfo['mtime']=datetime.fromtimestamp(stat(filepath).st_mtime)
-    fileinfo['mdatetime']=datetime.fromtimestamp(stat(filepath).st_mtime,timezone.utc).strftime("%a, %d %b %Y %T %z")
-    fileinfo['size']=stat(filepath).st_size
-    fileinfo['url']=URLBASE+"/"+urllib.parse.quote(filename)
-    fileinfo['guid']=md5(filename.encode()).hexdigest()
-
-    # Read ID3 tags
-    try:
-        id3 = ID3(filepath)
-    except ID3NoHeaderError:
-        print("ERROR: %s has no ID3 tag, skipping" % filename, file=sys.stderr)
-        continue
-
-    tags = {
-        'TRSN': None, 'TPE1': None, 'TALB': None, 'TRCK': None,
-        'TIT2': None, 'COMM': None, 'TYER': None, 'TDAT': None,
-        'TIME': None, 'TLEN': None
-    }
-
-    for t in tags:
-       try:
-           tags[t] = id3.getall(t)[0].text[0]
-       except:
-           tags[t] = None
-
-    fileinfo['desc']=tags['COMM']
-    fileinfo['title']=tags['TIT2']
-
-    if tags['TLEN'] is not None:
-        fileinfo['duration']=tags['TLEN']
-    else:
-        fileinfo['duration']=mutagen.File(filepath).info.length * 1000
-
-    fileinfo['itunes-duration']=time.strftime("%H:%M:%S",time.gmtime(int(int(fileinfo['duration'])/1000)))
-
-    mediafiles.append(fileinfo)
-
-#    print(fileinfo)
-#    sys.exit(0)
-
-#print(mediafiles)
-#sys.exit(0)
-
-for mediafile in sorted(mediafiles, key=lambda x: x['mtime'], reverse=True):
+for mediafile in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
     item = SubElement(channel, "item")
-    SubElement(item,'title').text=mediafile['title']
-    SubElement(item,'description').text=mediafile['desc']
-    SubElement(item,'itunes:summary').text=mediafile['desc']
+    SubElement(item,'title').text = mediafile['title']
+    SubElement(item,'description').text = mediafile['desc']
+    SubElement(item,'itunes:summary').text = mediafile['desc']
     SubElement(item,'enclosure', attrib={
         'url': mediafile['url'],
-        'type': "audio/mpeg",
+        'type': 'audio/mpeg',
         'length': str(mediafile['size'])
     })
-    SubElement(item,'guid').text=mediafile['guid']
-    SubElement(item,'pubDate').text=mediafile['mdatetime']
-    SubElement(item,'itunes:duration').text=mediafile['itunes-duration']
+    SubElement(item,'guid', attrib={'isPermaLink':'false'}).text = mediafile['guid']
+    SubElement(item,'pubDate').text = mediafile['pubdate'].strftime("%a, %d %b %Y %T %z")
+    SubElement(item,'itunes:duration').text = time.strftime("%H:%M:%S", time.gmtime(int(fileinfo['duration'])))
 
-print(tostring(root, encoding='utf8', method='xml').decode())
-#ElementTree(root).write("test.xml",encoding="utf-8", xml_declaration=True)
+    chapters = SubElement(item,'psc:chapters', attrib={ 'version': "1.2", 'xmlns:psc': 'http://podlove.org/simple-chapters' })
+    for chapter in sorted(mediafile['chapters'], key=lambda x: x['start']):
+        SubElement(chapters, 'psc:chapter', attrib={
+            'start': time.strftime("%H:%M:%S",time.gmtime(chapter['start'])),
+            'title': chapter['title'] })
+
+print(tostring(root, encoding='UTF-8', method='xml').decode())
