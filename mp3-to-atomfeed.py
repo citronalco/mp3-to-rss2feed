@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
 
-# Todo:
-# - testen (fm4 + zündfunk)
-# - Mehr id3-Tags verwenden
-# - ID3-Chapters zu Description hinzufügen
-# - validieren (https://castfeedvalidator.com/?url=https://www.geierb.de/test/test.xml)
-# - doku: https://help.apple.com/itc/podcasts_connect/#/itcb54353390
-# - http://gitlab.jamesgallagher.ie/python/rss-feeds-for-rpi-tvh-audio-content/blob/master/generateRSSFeed.py
-# - https://www.stuffaboutcode.com/2012/09/python-create-rss-podcast-of-mp3-files.html
-
 import sys
 from os import stat, listdir, path
 from xml.etree.ElementTree import Element, SubElement, Comment, tostring, ElementTree
@@ -19,6 +10,9 @@ from hashlib import md5
 import mutagen
 from mutagen.id3 import ID3,ID3NoHeaderError,TPE1,TALB,TRCK,TIT2,COMM,TYER,TDAT,TIME,TDRC,TDRL,TLEN,TDRL,CTOC,CHAP,CTOCFlags
 import re
+from os import path
+
+#import xml.dom.minidom
 
 if len(sys.argv) < 4 or len(sys.argv) > 5:
     print("Usage:", file=sys.stderr)
@@ -38,8 +32,7 @@ try:
 except:
     IMAGE = None
 
-LINK = URLBASE+"/podcast.xml";
-NOW = datetime.now(timezone.utc).strftime("%a, %d %b %Y %T %z")
+NOW = datetime.now(timezone.utc).astimezone().strftime("%a, %d %b %Y %T %z")
 
 mediafiles = []
 for filename in listdir(DIR):
@@ -50,7 +43,7 @@ for filename in listdir(DIR):
     fileinfo = {}
 
     fileinfo['name'] = filename
-    fileinfo['pubdate'] = datetime.fromtimestamp(stat(filepath).st_mtime,timezone.utc)
+    fileinfo['pubdate'] = datetime.fromtimestamp(stat(filepath).st_mtime,timezone.utc).astimezone()
     fileinfo['size'] = stat(filepath).st_size
     fileinfo['url'] = URLBASE+"/"+urllib.parse.quote(filename)
     fileinfo['guid'] = md5(filename.encode()).hexdigest()
@@ -94,7 +87,7 @@ for filename in listdir(DIR):
         fileinfo['chapters'].append(chapter)
 
     # handling for publishing date (ID3v2.3: TYER,TDAT,TIME ID3v2.4: TRDC/TDRL)
-    dt = datetime.fromtimestamp(0)
+    dt = datetime.fromtimestamp(0,timezone.utc).astimezone()
     if tags['TYER']:
         dt = dt.replace(year=tags['TYER'])
     if tags['TDAT']:
@@ -110,7 +103,7 @@ for filename in listdir(DIR):
         except:
             continue
 
-    if dt != datetime.fromtimestamp(0):
+    if dt != datetime.fromtimestamp(0,timezone.utc).astimezone():
         fileinfo['pubdate'] = dt
 
 
@@ -121,14 +114,13 @@ root = Element('rss', attrib={
     'version': '2.0',
     'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
     'xmlns:atom': 'http://www.w3.org/2005/Atom',
-    'xmlns:content': 'http://www.purl.org/rss/1.0/modules/content/',
 })
 
 channel = SubElement(root,"channel")
 
-SubElement(channel,'link').text=LINK
+SubElement(channel,'link').text = URLBASE+"/podcast.xml"
 SubElement(channel,'atom:link', attrib={
-    'href': LINK+'/podcast.xml',
+    'href': URLBASE+"/podcast.xml",
     'rel': 'self',
     'type': 'application/rss+xml'
 })
@@ -141,8 +133,8 @@ SubElement(channel,'itunes:category', attrib={'text':'Music'})
 SubElement(channel,'itunes:explicit').text = 'no'
 
 if IMAGE is not None:
-    image = SubElement(channel, "image")
-    image.append(Element('url', text=IMAGE))
+    image = SubElement(channel, "itunes:image", attrib={'href': IMAGE})
+
 
 for mediafile in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
     item = SubElement(channel, "item")
@@ -164,4 +156,7 @@ for mediafile in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), rever
             'start': time.strftime("%H:%M:%S",time.gmtime(chapter['start'])),
             'title': chapter['title'] })
 
-print(tostring(root, encoding='UTF-8', method='xml').decode())
+file = open(path.join(DIR, 'podcast.xml'),"w")
+
+file.write(tostring(root, encoding='UTF-8', method='xml').decode())	# xml in single line
+#file.write(xml.dom.minidom.parseString(tostring(root, encoding='UTF-8', method='xml').decode()).toprettyxml())	# pretty-print, requires xml.dom.minidom
