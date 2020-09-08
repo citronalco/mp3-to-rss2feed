@@ -2,16 +2,13 @@
 
 import sys
 from os import stat, listdir, path
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring, ElementTree
+from xml.etree.ElementTree import Element, SubElement, tostring
 import time
 from datetime import datetime, timezone
 import urllib.parse
 from hashlib import md5
 import mutagen
-from mutagen.id3 import ID3,ID3NoHeaderError,TPE1,TALB,TRCK,TIT2,COMM,TYER,TDAT,TIME,TDRC,TDRL,TLEN,TDRL,CTOC,CHAP,CTOCFlags
-import re
-from os import path
-
+from mutagen.id3 import ID3,ID3NoHeaderError
 #import xml.dom.minidom
 
 if len(sys.argv) < 4 or len(sys.argv) > 5:
