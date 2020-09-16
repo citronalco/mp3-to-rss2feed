@@ -16,8 +16,8 @@ if len(sys.argv) < 4 or len(sys.argv) > 5:
     print("%s <directory with MP3 files> <feed title> <URL to directory with MP3 files> [optional image url]\n" % sys.argv[0], file=sys.stderr)
     print("Example:", file=sys.stderr)
     print("%s /data/public/yoga-sessions-2017/ 'My Yoga Podcast 2017' https://example.com/yoga-sessions-2017/'\n" % sys.argv[0], file=sys.stderr)
-    print("This creates the ATOM feed XML file '/data/public/yoga-sessions-2017/podcast.xml' which contains all mp3 files from the directory /data/public/yoga-sessions-2017 with their medadata.", file=sys.stderr)
-    print("If those mp3 files are also available via https://example.com/yoga-sessions-2017/ you can play them with your favourite podcast player using the created ATOM feed file.\n", file=sys.stderr)
+    print("This creates the RSS2 feed XML file '/data/public/yoga-sessions-2017/podcast.xml' which contains all mp3 files from the directory /data/public/yoga-sessions-2017 with their medadata.", file=sys.stderr)
+    print("If those mp3 files are also available via https://example.com/yoga-sessions-2017/ you can play them with your favourite podcast player using the created RSS2 feed file.\n", file=sys.stderr)
     sys.exit(1)
 
 
@@ -46,6 +46,7 @@ for filename in listdir(DIR):
     fileinfo['guid'] = md5(filename.encode()).hexdigest()
     fileinfo['duration'] = mutagen.File(filepath).info.length	# duration in seconds
     fileinfo['chapters'] = []
+    fileinfo['link'] = None
 
     # Read ID3 tags
     try:
@@ -54,27 +55,33 @@ for filename in listdir(DIR):
         print("ERROR: %s has no ID3 tag, skipping" % filename, file=sys.stderr)
         continue
 
-    tags = {
+    tagFields = {
         'TPE1': None, 'TALB': None, 'TRCK': None,
         'TIT2': None, 'COMM': None,
         'TYER': None, 'TDAT': None, 'TIME': None, 
         'TDRC': None, 'TDRL': None, 'TDOR': None,
         'TLEN': None,
+        'WOAS': None, 'WORS': None,
     }
 
-    for t in tags:
+    for field in tagFields:
        try:
-           tags[t] = id3.getall(t)[0].text[0]
+           tagFields[field] = id3.getall(field)[0].text[0]
+       except AttributeError:
+           tagFields[field] = str(id3.getall(field)[0])
        except:
-           tags[t] = None
+           tagFields[field] = None
+
 
     # map ID3 tags to feed items
-    fileinfo['desc'] = tags['COMM']
-    fileinfo['title'] = tags['TIT2']
+    fileinfo['desc'] = tagFields['COMM']
+    fileinfo['title'] = tagFields['TIT2']
+
 
     # handling for TLEN
-    if tags['TLEN']:
-        fileinfo['duration'] = round(int(tags['TLEN'])/1000)
+    if tagFields['TLEN']:
+        fileinfo['duration'] = round(int(tagFields['TLEN'])/1000)
+
 
     # handling for Chapter tag
     for cFrame in id3.getall('CHAP'):
@@ -83,25 +90,33 @@ for filename in listdir(DIR):
         chapter['start'] = round(int(int(cFrame.start_time)/1000))	# start time in seconds
         fileinfo['chapters'].append(chapter)
 
+
     # handling for publishing date (ID3v2.3: TYER,TDAT,TIME ID3v2.4: TRDC/TDRL)
     dt = datetime.fromtimestamp(0,timezone.utc).astimezone()
-    if tags['TYER']:
-        dt = dt.replace(year=tags['TYER'])
-    if tags['TDAT']:
-        dt = dt.replace(day=tags['TDAT'][0:2],month=tags['TDAT'][2:4])
-    if tags['TIME']:
-        d = dt.replace(hour=tags['TIME'][0:2],minute=tags['TIME'][2:4])
+    if tagFields['TYER']:
+        dt = dt.replace(year=tagFields['TYER'])
+    if tagFields['TDAT']:
+        dt = dt.replace(day=tagFields['TDAT'][0:2],month=tagFields['TDAT'][2:4])
+    if tagFields['TIME']:
+        dt = dt.replace(hour=tagFields['TIME'][0:2],minute=tagFields['TIME'][2:4])
 
     for x in 'TDRC','TDRL','TDOR':
         try:
-            if tags[x]:
-                dt=dt.replace(year=tags[x].year, month=tags[x].month, day=tags[x].day, hour=tags[x].hour, minute=tags[x].minute, second=tags[x].second)
+            if tagFields[x]:
+                dt=dt.replace(year=tagFields[x].year, month=tagFields[x].month, day=tagFields[x].day, hour=tagFields[x].hour, minute=tagFields[x].minute, second=tagFields[x].second)
                 break;
         except:
             continue
 
     if dt != datetime.fromtimestamp(0,timezone.utc).astimezone():
         fileinfo['pubdate'] = dt
+
+
+    # handling for WOAS/WORS (link to show's website)
+    if tagFields['WOAS']:
+        fileinfo['link'] = tagFields['WOAS']
+    elif tagFields['WORS']:
+        fileinfo['link'] = tagFields['WORS']
 
 
     mediafiles.append(fileinfo)
@@ -136,6 +151,7 @@ if IMAGE is not None:
 for mediafile in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
     item = SubElement(channel, "item")
     SubElement(item,'title').text = mediafile['title']
+    SubElement(item,'link').text = mediafile['link']
     SubElement(item,'description').text = mediafile['desc']
     SubElement(item,'itunes:summary').text = mediafile['desc']
     SubElement(item,'enclosure', attrib={
@@ -145,7 +161,7 @@ for mediafile in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), rever
     })
     SubElement(item,'guid', attrib={'isPermaLink':'false'}).text = mediafile['guid']
     SubElement(item,'pubDate').text = mediafile['pubdate'].strftime("%a, %d %b %Y %T %z")
-    SubElement(item,'itunes:duration').text = time.strftime("%H:%M:%S", time.gmtime(int(fileinfo['duration'])))
+    SubElement(item,'itunes:duration').text = time.strftime("%H:%M:%S", time.gmtime(int(mediafile['duration'])))
 
     chapters = SubElement(item,'psc:chapters', attrib={ 'version': "1.2", 'xmlns:psc': 'http://podlove.org/simple-chapters' })
     for chapter in sorted(mediafile['chapters'], key=lambda x: x['start']):
