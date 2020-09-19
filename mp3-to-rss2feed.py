@@ -86,7 +86,10 @@ for filename in listdir(DIR):
     # handling for Chapter tag
     for cFrame in id3.getall('CHAP'):
         chapter = {}
-        chapter['title'] = cFrame.sub_frames.getall('TIT2')[0].text[0] or cFrame.element_id
+        try:
+            chapter['title'] = cFrame.sub_frames.getall('TIT2')[0].text[0]
+        except IndexError:
+            chapter['title'] = cFrame.element_id
         chapter['start'] = round(int(int(cFrame.start_time)/1000))	# start time in seconds
         fileinfo['chapters'].append(chapter)
 
