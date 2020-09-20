@@ -16,10 +16,9 @@ Titles, descriptions and chapters etc. required to build the RSS2 feed are read 
 If an image URL is given, this will be used as the feed's cover image.
 
 ### Example ###
-Your MP3 files are in directory "/data/mp3files/" and accessible via "https://www.example.net/podcast/".
+Your MP3 files are in directory "/data/mp3files/" and accessible via "https://example.net/podcast/".
 Now you want to have a nice RSS2 feed for it, to be able to subscribe and listen to them with your favourite podcast client:
 
-```./mp3-to-rss2feed.py "/data/mp3files/" "My Podcast" "https://www.example.net/mypodcast/" https://www.example.net/images/podcast.jpg```
+```./mp3-to-rss2feed.py "/data/mp3files/" "My Podcast" "https://example.net/mypodcast/" https://example.net/images/podcast.jpg```
 
-Now you can subscribe in your podcast player to: https://www.example.net/mypodcast/podcast.xml
-
+Now you can subscribe in your podcast player to: https://example.net/mypodcast/podcast.xml
