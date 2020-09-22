@@ -41,6 +41,7 @@ for filename in listdir(DIR):
 
     ### set default fileinfo without using ID3 tag - gets overwritten later with info from ID3 frames (if available)
     fileinfo['title'] = path.splitext(filename)[0]
+    fileinfo['author'] = None
     fileinfo['desc'] = None
     fileinfo['duration'] = mutagen.File(filepath).info.length	# duration in seconds
     fileinfo['chapters'] = []
@@ -56,7 +57,9 @@ for filename in listdir(DIR):
         id3 = ID3(filepath)
 
         tagFields = {
-            'TIT2': None, 'COMM': None,
+            'TIT2': None,
+            'TPE1': None, 'TPE2': None,
+            'COMM': None,
             'TYER': None, 'TDAT': None, 'TIME': None, 
             'TDRC': None, 'TDRL': None, 'TDOR': None,
             'TLEN': None,
@@ -76,6 +79,12 @@ for filename in listdir(DIR):
         # title
         if tagFields['TIT2']:
             fileinfo['title'] = tagFields['TIT2']
+
+        # artist/author
+        if tagFields['TPE1']:
+            fileinfo['author'] = tagFields['TPE1']
+        elif tagFields['TPE2']:
+            fileinfo['author'] = tagFields['TPE2']
 
         # desc
         if tagFields['COMM']:
@@ -158,6 +167,7 @@ if IMAGE is not None:
 for fileinfo in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
     item = SubElement(channel, "item")
     SubElement(item,'title').text = fileinfo['title']
+    SubElement(item,'author').text = fileinfo['author']
     SubElement(item,'link').text = fileinfo['link']
     SubElement(item,'description').text = fileinfo['desc']
     SubElement(item,'itunes:summary').text = fileinfo['desc']
