@@ -154,6 +154,7 @@ SubElement(channel,'atom:link', attrib={
 })
 SubElement(channel,"language").text = "de"
 SubElement(channel,'lastBuildDate').text = NOW
+SubElement(channel,'generator').text = "https://github.com/citronalco/mp3-to-rss2feed"
 SubElement(channel,'title').text = FEEDTITLE
 SubElement(channel,'description').text = FEEDTITLE
 SubElement(channel,'itunes:summary').text = FEEDTITLE
@@ -164,6 +165,8 @@ if IMAGE is not None:
     SubElement(channel, "itunes:image", attrib={'href': IMAGE})
     image = SubElement(channel, "image")
     SubElement(image,'url').text = IMAGE
+    SubElement(image,'title').text = FEEDTITLE
+    SubElement(image,'link')
 
 
 for fileinfo in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
