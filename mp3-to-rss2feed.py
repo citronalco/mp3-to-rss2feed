@@ -153,7 +153,7 @@ SubElement(channel,'atom:link', attrib={
     'type': 'application/rss+xml'
 })
 SubElement(channel,"language").text = "de"
-SubElement(channel,'pubDate').text = NOW
+SubElement(channel,'lastBuildDate').text = NOW
 SubElement(channel,'title').text = FEEDTITLE
 SubElement(channel,'description').text = FEEDTITLE
 SubElement(channel,'itunes:summary').text = FEEDTITLE
