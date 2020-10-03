@@ -1,6 +1,6 @@
 # MP3-to-RSS2 Feed
 
-Python 3 script to create a RSS2 feed for all MP3 files in a given directory, suitable for the usual podcast players.
+Python 3 script to create a RSS2 feed for all MP3 files in a directory, suitable for all podcast players.
 
 ### Requirements
 Python 3 with modules "mutagen" and "urllib3"
@@ -12,7 +12,7 @@ Python 3 with modules "mutagen" and "urllib3"
 The script examines all MP3 files in the <mp3 files directory> and reads their ID3 tags.
 With the retrieved information the script builds a RSS2 podcast feed and saves it as "<mp3 files directory>/podcast.xml".
 
-If an image URL is given it will be used as the feed's cover image.
+Optional: If an image URL is given it will be used as the feed's cover image.
 
 ### Example ###
 Your MP3 files are in directory "/data/mp3files/" and accessible via "https://example.net/podcast/".
