@@ -161,7 +161,9 @@ SubElement(channel,'itunes:category', attrib={'text':'Music'})
 SubElement(channel,'itunes:explicit').text = 'no'
 
 if IMAGE is not None:
-    image = SubElement(channel, "itunes:image", attrib={'href': IMAGE})
+    SubElement(channel, "itunes:image", attrib={'href': IMAGE})
+    image = SubElement(channel, "image")
+    SubElement(image,'url').text = IMAGE
 
 
 for fileinfo in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
