@@ -15,10 +15,10 @@ With the retrieved information the script builds a RSS2 podcast feed and saves i
 Optional: If an image URL is given it will be used as the feed's cover image.
 
 ### Example ###
-Your MP3 files are in directory "/data/mp3files/" and accessible via "https://example.net/podcast/".
+Your MP3 files are in directory "/data/mp3files/" and accessible via "https://example.net/mypodcast/".
 Now you want to have a nice RSS2 feed for it, to be able to subscribe and listen to them with your favourite podcast client:
 
-```./mp3-to-rss2feed.py "/data/mp3files/" "My Podcast" "https://example.net/mypodcast/" https://example.net/images/podcast.jpg```
+```./mp3-to-rss2feed.py "/data/mp3files/" "My Podcast" "https://example.net/mypodcast/" https://example.net/images/mypodcast.jpg```
 
 Now you can subscribe in your podcast player to: https://example.net/mypodcast/podcast.xml
 
