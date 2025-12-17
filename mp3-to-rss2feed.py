@@ -80,12 +80,6 @@ for filename in listdir(DIR):
         if tagFields['TIT2']:
             fileinfo['title'] = tagFields['TIT2']
 
-        # artist/author
-        if tagFields['TPE1']:
-            fileinfo['author'] = tagFields['TPE1']
-        elif tagFields['TPE2']:
-            fileinfo['author'] = tagFields['TPE2']
-
         # desc
         if tagFields['COMM']:
             fileinfo['desc'] = tagFields['COMM']
@@ -166,13 +160,12 @@ if IMAGE is not None:
     image = SubElement(channel, "image")
     SubElement(image,'url').text = IMAGE
     SubElement(image,'title').text = FEEDTITLE
-    SubElement(image,'link')
+    SubElement(image,'link').text = URLBASE+"/podcast.xml"
 
 
 for fileinfo in sorted(mediafiles,key=lambda x: x['pubdate'].timestamp(), reverse=True):
     item = SubElement(channel, "item")
     SubElement(item,'title').text = fileinfo['title']
-    SubElement(item,'author').text = fileinfo['author']
     SubElement(item,'link').text = fileinfo['link']
     SubElement(item,'description').text = fileinfo['desc']
     SubElement(item,'itunes:summary').text = fileinfo['desc']
