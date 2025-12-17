@@ -142,6 +142,9 @@ def main():
         'version': '2.0',
         'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd',
         'xmlns:atom': 'http://www.w3.org/2005/Atom',
+        'xmlns:googleplay': 'http://www.google.com/schemas/play-podcasts/1.0',
+        'xmlns:psc': 'http://podlove.org/simple-chapters',
+        'xmlns:podcast': 'https://podcastindex.org/namespace/1.0',
     })
 
     channel = SubElement(root,"channel")
@@ -152,7 +155,7 @@ def main():
         'rel': 'self',
         'type': 'application/rss+xml'
     })
-    SubElement(channel,"language").text = "de"
+    SubElement(channel,'language').text = "de"
     SubElement(channel,'lastBuildDate').text = NOW
     SubElement(channel,'generator').text = "https://github.com/citronalco/mp3-to-rss2feed"
     SubElement(channel,'title').text = FEEDTITLE
@@ -161,6 +164,8 @@ def main():
     SubElement(channel,'itunes:category', attrib={'text':'Music'})
     SubElement(channel,'itunes:explicit').text = 'No'
     SubElement(channel,'itunes:block').text = 'Yes' if PRIVATE else 'No'
+    SubElement(channel,'googleplay:block').text = 'yes' if PRIVATE else 'no'
+    SubElement(channel,'podcast:block').text = 'yes' if PRIVATE else 'no'
 
     if IMAGE is not None:
         SubElement(channel, "itunes:image", attrib={'href': IMAGE})
