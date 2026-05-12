@@ -95,14 +95,25 @@ def main():
                 fileinfo['duration'] = round(int(tagFields['TLEN'])/1000)
 
             # chapters
-            for cFrame in id3.getall('CHAP'):
-                chapter = {}
-                try:
-                    chapter['title'] = cFrame.sub_frames.getall('TIT2')[0].text[0]
-                except IndexError:
-                    chapter['title'] = cFrame.element_id
-                chapter['start'] = round(int(int(cFrame.start_time)/1000))	# start time in seconds
-                fileinfo['chapters'].append(chapter)
+            try:
+                # get chapter ids from TOC
+                visible_chapter_ids = id3.getall('CTOC')[0].child_element_ids
+            except IndexError:
+                visible_chapter_ids = []
+
+            if visible_chapter_ids:
+                for cFrame in id3.getall('CHAP'):
+                    # skip chapters not listed in TOC ("hidden chapters")
+                    if cFrame.element_id not in visible_chapter_ids:
+                        continue
+
+                    chapter = {}
+                    try:
+                        chapter['title'] = cFrame.sub_frames.getall('TIT2')[0].text[0]
+                    except IndexError:
+                        chapter['title'] = cFrame.element_id
+                    chapter['start'] = round(int(int(cFrame.start_time)/1000))	# start time in seconds
+                    fileinfo['chapters'].append(chapter)
 
             # pubdate (ID3v2.3: TYER,TDAT,TIME ID3v2.4: TRDC/TDRL - start with 1.1.1970 and modify it with the availble frames)
             dt = datetime.fromtimestamp(0,timezone.utc).astimezone()
